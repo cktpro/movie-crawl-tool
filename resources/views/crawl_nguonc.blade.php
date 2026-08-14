@@ -302,7 +302,7 @@
 
             const fetchApi = async (link, from, to) => {
                 isFetching = true;
-                const response = await fetch("{{ backpack_url('plugin/ophim-crawler/fetch_nguonc') }}?" +
+                const response = await fetch("{{ backpack_url('plugin/movie-crawler/fetch_nguonc') }}?" +
                     new URLSearchParams({
                         link,
                         from,
@@ -512,7 +512,7 @@
             const excludedRegions = $("[name='excludedRegions[]']").val()
             const excludedType = $("[name='excludedType[]']").val()
             const forceUpdate = ($("[name='force_update']").prop('checked') == true) ? true : false;
-            const response = await fetch("{{ backpack_url('plugin/ophim-crawler/crawl_nguonc') }}", {
+            const response = await fetch("{{ backpack_url('plugin/movie-crawler/crawl_nguonc') }}", {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",
@@ -542,10 +542,10 @@
         }
 
         $("#movies-get-handle").click(async function() {
-            const apiDomain = "{{ config('ophim_crawler.domain', 'https://ophim1.com') }}";
+            const apiDomain = "{{ config('movie_crawler.domain', 'https://ophim1.com') }}";
             let params = $("select[name=movies-get-params]").find(":selected").val();
 
-            const response = await fetch("{{ backpack_url('plugin/ophim-crawler/get-movies') }}", {
+            const response = await fetch("{{ backpack_url('plugin/movie-crawler/get-movies') }}", {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",

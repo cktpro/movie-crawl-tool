@@ -1,18 +1,18 @@
 <?php
 
-namespace Ophim\Crawler\OphimCrawler\Console;
+namespace Movie\Crawler\MovieCrawler\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use Ophim\Crawler\OphimCrawler\ImageStorage;
-use Ophim\Crawler\OphimCrawler\OrphanImageScanner;
+use Movie\Crawler\MovieCrawler\ImageStorage;
+use Movie\Crawler\MovieCrawler\OrphanImageScanner;
 
 class CleanupOrphanImagesCommand extends Command
 {
     /**
      * @var string
      */
-    protected $signature = 'ophim:plugins:ophim-crawler:cleanup-images
+    protected $signature = 'movie:plugins:movie-crawler:cleanup-images
         {--disk=* : local, r2, hoặc cả hai (mặc định: quét local, và quét thêm r2 nếu đã cấu hình)}
         {--delete : Xoá thật các thư mục mồ côi thay vì chỉ liệt kê}
         {--force : Không hỏi xác nhận, và xoá cả thư mục "chưa an toàn" (mới sửa gần đây)}
@@ -89,7 +89,7 @@ class CleanupOrphanImagesCommand extends Command
 
         $result = OrphanImageScanner::delete($toDelete);
 
-        Log::channel('ophim-crawler')->info('[cleanup-images] Đã xoá thư mục ảnh mồ côi', [
+        Log::channel('movie-crawler')->info('[cleanup-images] Đã xoá thư mục ảnh mồ côi', [
             'count' => count($result['deleted']),
             'freed_bytes' => $result['freed_bytes'],
             'paths' => $result['deleted'],

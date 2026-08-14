@@ -1,18 +1,18 @@
 <?php
 
-namespace Ophim\Crawler\OphimCrawler\Controllers;
+namespace Movie\Crawler\MovieCrawler\Controllers;
 
 
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Ophim\Crawler\OphimCrawler\Crawler;
-use Ophim\Core\Models\Movie;
+use Movie\Crawler\MovieCrawler\Crawler;
+use Movie\Core\Models\Movie;
 
 /**
  * Class CrawlController
- * @package Ophim\Crawler\OphimCrawler\Controllers
+ * @package Movie\Crawler\MovieCrawler\Controllers
  * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
  */
 class CrawlController extends CrudController
@@ -27,7 +27,7 @@ class CrawlController extends CrudController
 
             foreach ($request['link'] as $link) {
                 if (preg_match('/(.*?)(\/phim\/)(.*?)/', $link)) {
-                    $link = sprintf('%s/api/film/%s', config('ophim_crawler.domain', 'https://phim.nguonc.com'), explode('phim/', $link)[1]);
+                    $link = sprintf('%s/api/film/%s', config('movie_crawler.domain', 'https://phim.nguonc.com'), explode('phim/', $link)[1]);
                     $response = json_decode(file_get_contents($link), true);
                     $data->push(collect($response['movie'])->only('name', 'slug')->toArray());
                 } else {
@@ -57,7 +57,7 @@ class CrawlController extends CrudController
 
             foreach ($request['link'] as $link) {
                 if (preg_match('/(.*?)(\/phim\/)(.*?)/', $link)) {
-                    $link = sprintf('%s/phim/%s', config('ophim_crawler.domain', 'https://ophim1.com'), explode('phim/', $link)[1]);
+                    $link = sprintf('%s/phim/%s', config('movie_crawler.domain', 'https://ophim1.com'), explode('phim/', $link)[1]);
                     $response = json_decode(file_get_contents($link), true);
                     $data->push(collect($response['movie'])->only('name', 'slug')->toArray());
                 } else {
@@ -83,13 +83,13 @@ class CrawlController extends CrudController
         $categories = [];
         $regions = [];
         try {
-            $categories = Cache::remember('ophim_categories', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('ophim_crawler.domain', 'https://ophim1.com'))), true) ?? [];
+            $categories = Cache::remember('movie_categories', 86400, function () {
+                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
 
-            $regions = Cache::remember('ophim_regions', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('ophim_crawler.domain', 'https://ophim1.com'))), true) ?? [];
+            $regions = Cache::remember('movie_regions', 86400, function () {
+                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
         } catch (\Throwable $th) {
@@ -98,7 +98,7 @@ class CrawlController extends CrudController
 
         $fields = $this->movieUpdateOptions();
 
-        return view('ophim-crawler::crawl_nguonc', compact('fields', 'regions', 'categories'));
+        return view('movie-crawler::crawl_nguonc', compact('fields', 'regions', 'categories'));
     }
 // End ShowCrawlPage Nguonc
     public function showCrawlPage(Request $request)
@@ -106,13 +106,13 @@ class CrawlController extends CrudController
         $categories = [];
         $regions = [];
         try {
-            $categories = Cache::remember('ophim_categories', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('ophim_crawler.domain', 'https://ophim1.com'))), true) ?? [];
+            $categories = Cache::remember('movie_categories', 86400, function () {
+                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
 
-            $regions = Cache::remember('ophim_regions', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('ophim_crawler.domain', 'https://ophim1.com'))), true) ?? [];
+            $regions = Cache::remember('movie_regions', 86400, function () {
+                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
         } catch (\Throwable $th) {
@@ -121,12 +121,12 @@ class CrawlController extends CrudController
 
         $fields = $this->movieUpdateOptions();
 
-        return view('ophim-crawler::crawl', compact('fields', 'regions', 'categories'));
+        return view('movie-crawler::crawl', compact('fields', 'regions', 'categories'));
     }
     // Crawl Nguonc
     public function crawl_nguonc(Request $request)
     {
-        $pattern = sprintf('%s/api/film/{slug}', config('ophim_crawler.domain', 'https://phim.nguonc.com'));
+        $pattern = sprintf('%s/api/film/{slug}', config('movie_crawler.domain', 'https://phim.nguonc.com'));
         try {
             $link = str_replace('{slug}', $request['slug'], $pattern);
             $crawler = (new Crawler($link, request('fields', []), request('excludedCategories', []), request('excludedRegions', []), request('excludedType', []), request('forceUpdate', false)))->handle_nguonc();
@@ -138,7 +138,7 @@ class CrawlController extends CrudController
     // End Crawl Nguonc
     public function crawl(Request $request)
     {
-        $pattern = sprintf('%s/phim/{slug}', config('ophim_crawler.domain', 'https://ophim1.com'));
+        $pattern = sprintf('%s/phim/{slug}', config('movie_crawler.domain', 'https://ophim1.com'));
         try {
             $link = str_replace('{slug}', $request['slug'], $pattern);
             $crawler = (new Crawler($link, request('fields', []), request('excludedCategories', []), request('excludedRegions', []), request('excludedType', []), request('forceUpdate', false)))->handle();

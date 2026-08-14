@@ -14,17 +14,17 @@ Route::group([
         (array) config('backpack.base.web_middleware', 'web'),
         (array) config('backpack.base.middleware_key', 'admin')
     ),
-    'namespace'  => 'Ophim\Crawler\OphimCrawler\Controllers',
+    'namespace'  => 'Movie\Crawler\MovieCrawler\Controllers',
 ], function () {
-    Route::get('/plugin/ophim-crawler', 'CrawlController@showCrawlPage');
+    Route::get('/plugin/movie-crawler', 'CrawlController@showCrawlPage');
     Route::get('/plugin/nguonc-crawler', 'CrawlController@showCrawlPageNguonc');
-    Route::get('/plugin/ophim-crawler/options', 'CrawlerSettingController@editOptions');
-    Route::put('/plugin/ophim-crawler/options', 'CrawlerSettingController@updateOptions');
-    Route::get('/plugin/ophim-crawler/fetch', 'CrawlController@fetch');
-    Route::get('/plugin/ophim-crawler/fetch_nguonc', 'CrawlController@fetch_nguonc');
-    Route::post('/plugin/ophim-crawler/crawl', 'CrawlController@crawl');
-    Route::post('/plugin/ophim-crawler/crawl_nguonc', 'CrawlController@crawl_nguonc');
-    Route::post('/plugin/ophim-crawler/get-movies', 'CrawlController@getMoviesFromParams');
-    Route::get('/plugin/ophim-crawler/images-cleanup', 'ImageCleanupController@index');
-    Route::post('/plugin/ophim-crawler/images-cleanup', 'ImageCleanupController@destroy');
+    Route::get('/plugin/movie-crawler/options', 'CrawlerSettingController@editOptions');
+    Route::put('/plugin/movie-crawler/options', 'CrawlerSettingController@updateOptions');
+    Route::get('/plugin/movie-crawler/fetch', 'CrawlController@fetch');
+    Route::get('/plugin/movie-crawler/fetch_nguonc', 'CrawlController@fetch_nguonc');
+    Route::post('/plugin/movie-crawler/crawl', 'CrawlController@crawl');
+    Route::post('/plugin/movie-crawler/crawl_nguonc', 'CrawlController@crawl_nguonc');
+    Route::post('/plugin/movie-crawler/get-movies', 'CrawlController@getMoviesFromParams');
+    Route::get('/plugin/movie-crawler/images-cleanup', 'ImageCleanupController@index');
+    Route::post('/plugin/movie-crawler/images-cleanup', 'ImageCleanupController@destroy');
 });

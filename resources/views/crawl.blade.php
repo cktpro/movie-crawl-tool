@@ -3,7 +3,7 @@
 @php
     $defaultBreadcrumbs = [
         trans('backpack::crud.admin') => backpack_url('dashboard'),
-        'Crawler' => backpack_url('plugin/ophim-crawler'),
+        'Crawler' => backpack_url('plugin/movie-crawler'),
     ];
 
     $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
@@ -304,7 +304,7 @@
 
             const fetchApi = async (link, from, to) => {
                 isFetching = true;
-                const response = await fetch("{{ backpack_url('plugin/ophim-crawler/fetch') }}?" +
+                const response = await fetch("{{ backpack_url('plugin/movie-crawler/fetch') }}?" +
                     new URLSearchParams({
                         link,
                         from,
@@ -514,7 +514,7 @@
             const excludedRegions = $("[name='excludedRegions[]']").val()
             const excludedType = $("[name='excludedType[]']").val()
             const forceUpdate = ($("[name='force_update']").prop('checked') == true) ? true : false;
-            const response = await fetch("{{ backpack_url('plugin/ophim-crawler/crawl') }}", {
+            const response = await fetch("{{ backpack_url('plugin/movie-crawler/crawl') }}", {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",
@@ -544,10 +544,10 @@
         }
 
         $("#movies-get-handle").click(async function() {
-            const apiDomain = "{{ config('ophim_crawler.domain', 'https://ophim1.com') }}";
+            const apiDomain = "{{ config('movie_crawler.domain', 'https://ophim1.com') }}";
             let params = $("select[name=movies-get-params]").find(":selected").val();
 
-            const response = await fetch("{{ backpack_url('plugin/ophim-crawler/get-movies') }}", {
+            const response = await fetch("{{ backpack_url('plugin/movie-crawler/get-movies') }}", {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",

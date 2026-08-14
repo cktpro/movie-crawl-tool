@@ -1,15 +1,15 @@
 {
-    "name": "roxone/ophim-nguonc-crawler",
+    "name": "roxone/movie-nguonc-crawler",
     "description": "Tool crawler",
     "type": "package",
     "require": {
-        "roxone/ophim-core": "dev-main",
+        "roxone/movie-core": "dev-main",
         "intervention/image": "^2.7"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Ophim\\Crawler\\OphimCrawler\\": "src/"
+            "Movie\\Crawler\\MovieCrawler\\": "src/"
         }
     },
     "authors": [
@@ -21,7 +21,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Ophim\\Crawler\\OphimCrawler\\OphimCrawlerServiceProvider"
+                "Movie\\Crawler\\MovieCrawler\\MovieCrawlerServiceProvider"
             ]
         }
     },

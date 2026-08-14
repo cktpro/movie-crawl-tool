@@ -1,11 +1,11 @@
 <?php
 
-namespace Ophim\Crawler\OphimCrawler\Controllers;
+namespace Movie\Crawler\MovieCrawler\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Ophim\Crawler\OphimCrawler\ImageStorage;
-use Ophim\Crawler\OphimCrawler\OrphanImageScanner;
+use Movie\Crawler\MovieCrawler\ImageStorage;
+use Movie\Crawler\MovieCrawler\OrphanImageScanner;
 use Prologue\Alerts\Facades\Alert;
 
 /**
@@ -33,7 +33,7 @@ class ImageCleanupController extends Controller
             }
         }
 
-        return view('ophim-crawler::images_cleanup', [
+        return view('movie-crawler::images_cleanup', [
             'title' => 'Dọn ảnh rác',
             'breadcrumbs' => [
                 trans('backpack::crud.admin') => backpack_url('dashboard'),
@@ -90,7 +90,7 @@ class ImageCleanupController extends Controller
 
         $result = OrphanImageScanner::delete($toDelete);
 
-        \Illuminate\Support\Facades\Log::channel('ophim-crawler')->info('[images-cleanup] Xoá thư mục ảnh mồ côi qua admin', [
+        \Illuminate\Support\Facades\Log::channel('movie-crawler')->info('[images-cleanup] Xoá thư mục ảnh mồ côi qua admin', [
             'user' => $request->user() ? $request->user()->id : null,
             'count' => count($result['deleted']),
             'freed_bytes' => $result['freed_bytes'],

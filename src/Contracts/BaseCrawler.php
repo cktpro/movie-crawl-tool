@@ -1,6 +1,6 @@
 <?php
 
-namespace Ophim\Crawler\OphimCrawler\Contracts;
+namespace Movie\Crawler\MovieCrawler\Contracts;
 
 abstract class BaseCrawler
 {

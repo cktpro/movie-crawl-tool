@@ -14,7 +14,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <form method="GET" action="{{ backpack_url('plugin/ophim-crawler/images-cleanup') }}" class="row align-items-end">
+                <form method="GET" action="{{ backpack_url('plugin/movie-crawler/images-cleanup') }}" class="row align-items-end">
                     <input type="hidden" name="scan" value="1">
                     <div class="form-group col-md-4">
                         <label>Nơi lưu ảnh cần quét</label>
@@ -47,12 +47,12 @@
                     @else
                         <div class="alert alert-warning">
                             Tìm thấy <b>{{ count($orphans) }}</b> thư mục, tổng
-                            <b>{{ \Ophim\Crawler\OphimCrawler\OrphanImageScanner::formatBytes($totalSize) }}</b>.
+                            <b>{{ \Movie\Crawler\MovieCrawler\OrphanImageScanner::formatBytes($totalSize) }}</b>.
                             Thư mục đánh dấu <b>"Chưa (mới)"</b> nghĩa là mới sửa gần đây hơn ngưỡng an toàn ở trên —
                             mặc định sẽ <u>không</u> bị xoá trừ khi bạn tick "Buộc xoá cả mục chưa an toàn".
                         </div>
 
-                        <form method="POST" action="{{ backpack_url('plugin/ophim-crawler/images-cleanup') }}"
+                        <form method="POST" action="{{ backpack_url('plugin/movie-crawler/images-cleanup') }}"
                             onsubmit="return confirm('Xoá các thư mục đã chọn? Hành động này KHÔNG thể hoàn tác.');">
                             @csrf
                             <input type="hidden" name="min_age" value="{{ $minAge }}">
@@ -81,7 +81,7 @@
                                                 <td>{{ $o['disk'] }}</td>
                                                 <td><code>{{ $o['path'] }}</code></td>
                                                 <td>{{ $o['files'] }}</td>
-                                                <td>{{ \Ophim\Crawler\OphimCrawler\OrphanImageScanner::formatBytes($o['size']) }}</td>
+                                                <td>{{ \Movie\Crawler\MovieCrawler\OrphanImageScanner::formatBytes($o['size']) }}</td>
                                                 <td>{{ $o['last_modified'] ? date('Y-m-d H:i', $o['last_modified']) : '(rỗng)' }}</td>
                                                 <td>
                                                     @if ($o['safe_to_delete'])
