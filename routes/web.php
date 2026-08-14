@@ -25,4 +25,6 @@ Route::group([
     Route::post('/plugin/ophim-crawler/crawl', 'CrawlController@crawl');
     Route::post('/plugin/ophim-crawler/crawl_nguonc', 'CrawlController@crawl_nguonc');
     Route::post('/plugin/ophim-crawler/get-movies', 'CrawlController@getMoviesFromParams');
+    Route::get('/plugin/ophim-crawler/images-cleanup', 'ImageCleanupController@index');
+    Route::post('/plugin/ophim-crawler/images-cleanup', 'ImageCleanupController@destroy');
 });

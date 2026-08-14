@@ -111,6 +111,55 @@ class Option
                 'type' => 'checkbox',
                 'tab' => 'Image Optimize'
             ],
+            'image_storage_disk' => [
+                'name' => 'image_storage_disk',
+                'label' => 'Nơi lưu ảnh',
+                'type' => 'select_from_array',
+                'options' => [
+                    'local' => 'Local (storage/app/public)',
+                    'r2' => 'Cloudflare R2',
+                ],
+                'default' => 'local',
+                'allows_null' => false,
+                'hint' => 'Chọn R2 thì cấu hình thêm ở tab <b>Cloudflare R2</b>.',
+                'wrapper' => [
+                    'class' => 'form-group col-md-4',
+                ],
+                'tab' => 'Image Optimize'
+            ],
+            'image_format' => [
+                'name' => 'image_format',
+                'label' => 'Định dạng ảnh lưu',
+                'type' => 'select_from_array',
+                'options' => [
+                    'original' => 'Giữ định dạng gốc',
+                    'webp' => 'Chuyển sang WebP',
+                ],
+                'default' => 'original',
+                'allows_null' => false,
+                'hint' => 'WebP cần PHP có GD/Imagick hỗ trợ WebP; nếu không hỗ trợ sẽ tự giữ định dạng gốc.',
+                'wrapper' => [
+                    'class' => 'form-group col-md-4',
+                ],
+                'tab' => 'Image Optimize'
+            ],
+            'image_quality' => [
+                'name' => 'image_quality',
+                'label' => 'Chất lượng ảnh (1-100)',
+                'type' => 'number',
+                'default' => 85,
+                'attributes' => [
+                    'placeholder' => '85',
+                    'min' => 1,
+                    'max' => 100,
+                    'class' => 'form-control',
+                ],
+                'hint' => 'Chỉ áp dụng khi ảnh được encode lại (chuyển WebP hoặc có resize).',
+                'wrapper' => [
+                    'class' => 'form-group col-md-4',
+                ],
+                'tab' => 'Image Optimize'
+            ],
             'should_resize_thumb' => [
                 'name' => 'should_resize_thumb',
                 'label' => 'Resize ảnh thumb khi tải về',
@@ -176,6 +225,70 @@ class Option
                     'class'       => 'form-group col-md-6',
                 ],
                 'tab' => 'Image Optimize'
+            ],
+            'r2_endpoint' => [
+                'name' => 'r2_endpoint',
+                'label' => 'R2 Endpoint',
+                'type' => 'text',
+                'attributes' => [
+                    'placeholder' => 'https://<account_id>.r2.cloudflarestorage.com',
+                    'class' => 'form-control',
+                ],
+                'hint' => 'Để trống tất cả các ô ở tab này nếu đã khai báo bằng biến <code>R2_*</code> trong <code>.env</code>. Giá trị điền ở đây sẽ ghi đè <code>.env</code> và được lưu <b>dạng plaintext</b> trong bảng <code>settings</code>.',
+                'wrapper' => [
+                    'class' => 'form-group col-md-6',
+                ],
+                'tab' => 'Cloudflare R2'
+            ],
+            'r2_bucket' => [
+                'name' => 'r2_bucket',
+                'label' => 'R2 Bucket',
+                'type' => 'text',
+                'attributes' => [
+                    'placeholder' => 'ten-bucket',
+                    'class' => 'form-control',
+                ],
+                'wrapper' => [
+                    'class' => 'form-group col-md-6',
+                ],
+                'tab' => 'Cloudflare R2'
+            ],
+            'r2_access_key_id' => [
+                'name' => 'r2_access_key_id',
+                'label' => 'R2 Access Key ID',
+                'type' => 'text',
+                'attributes' => [
+                    'autocomplete' => 'off',
+                    'class' => 'form-control',
+                ],
+                'wrapper' => [
+                    'class' => 'form-group col-md-6',
+                ],
+                'tab' => 'Cloudflare R2'
+            ],
+            'r2_secret_access_key' => [
+                'name' => 'r2_secret_access_key',
+                'label' => 'R2 Secret Access Key',
+                'type' => 'text',
+                'attributes' => [
+                    'autocomplete' => 'off',
+                    'class' => 'form-control',
+                ],
+                'wrapper' => [
+                    'class' => 'form-group col-md-6',
+                ],
+                'tab' => 'Cloudflare R2'
+            ],
+            'r2_url' => [
+                'name' => 'r2_url',
+                'label' => 'Public URL',
+                'type' => 'text',
+                'attributes' => [
+                    'placeholder' => 'https://cdn.hoathinhhay.org hoặc https://pub-xxxx.r2.dev',
+                    'class' => 'form-control',
+                ],
+                'hint' => 'Domain công khai của bucket (custom domain hoặc r2.dev). URL ảnh lưu vào DB sẽ có dạng <code>&lt;Public URL&gt;/images/{slug}/{file}</code>.',
+                'tab' => 'Cloudflare R2'
             ],
             'crawler_schedule_enable' => [
                 'name' => 'crawler_schedule_enable',

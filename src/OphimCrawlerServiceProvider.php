@@ -4,6 +4,7 @@ namespace Ophim\Crawler\OphimCrawler;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as SP;
+use Ophim\Crawler\OphimCrawler\Console\CleanupOrphanImagesCommand;
 use Ophim\Crawler\OphimCrawler\Console\CrawlerScheduleCommand;
 use Ophim\Crawler\OphimCrawler\Option;
 
@@ -32,6 +33,7 @@ class OphimCrawlerServiceProvider extends SP
                     ['name' => 'Crawler', 'icon' => 'la la-hand-grab-o', 'url' => backpack_url('/plugin/ophim-crawler')],
                     ['name' => 'Crawler Nguonc', 'icon' => 'la la-hand-grab-o', 'url' => backpack_url('/plugin/nguonc-crawler')],
                     ['name' => 'Option', 'icon' => 'la la-cog', 'url' => backpack_url('/plugin/ophim-crawler/options')],
+                    ['name' => 'Dọn ảnh rác', 'icon' => 'la la-trash-o', 'url' => backpack_url('/plugin/ophim-crawler/images-cleanup')],
                 ],
             ]
         ])]);
@@ -57,6 +59,7 @@ class OphimCrawlerServiceProvider extends SP
     {
         $this->commands([
             CrawlerScheduleCommand::class,
+            CleanupOrphanImagesCommand::class,
         ]);
 
         $this->app->booted(function () {
