@@ -11,7 +11,7 @@ abstract class BaseCrawler
     protected $excludedType;
     protected $forceUpdate;
 
-    public function __construct($link, $fields, $excludedCategories = [], $excludedRegions = [], $excludedType = [], $forceUpdate)
+    public function __construct($link, $fields, $excludedCategories = [], $excludedRegions = [], $excludedType = [], $forceUpdate = false)
     {
         $this->link = $link;
         $this->fields = $fields;

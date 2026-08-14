@@ -4,7 +4,6 @@ namespace Ophim\Crawler\OphimCrawler;
 
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManagerStatic as Image;
-use Illuminate\Support\Facades\Storage;
 
 class Collector
 {
@@ -27,7 +26,7 @@ public function get_nguonc(): array
         $data = [
             'name' => $info['name'],
             'origin_name' => $info['original_name'],
-            'publish_year' => $info['category']['3']['list'][0]['name'],
+            'publish_year' => $info['category']['3']['list'][0]['name'] ?? null,
             'content' => $info['description'],
             'type' =>  $this->getMovieTypeNguonc($info, $episodes),
             'status' => $this->getStatusNguonc($info['current_episode']),
@@ -134,7 +133,7 @@ public function get_nguonc(): array
     // Get type nguonc
     protected function getMovieTypeNguonc($info, $episodes)
     {
-        return $info['category']['1']['list'][0]['name'] == 'Phim bộ' ? 'series'
+        return ($info['category']['1']['list'][0]['name'] ?? null) == 'Phim bộ' ? 'series'
             : 'single';
     }
     // End get type nguonc
@@ -145,7 +144,7 @@ public function get_nguonc(): array
                 : (count(reset($episodes)['server_data'] ?? []) > 1 ? 'series' : 'single'));
     }
 
-    protected function getImage($slug, string $url, $shouldResize = false, $width = null, $height = null): string
+    protected function getImage($slug, ?string $url, $shouldResize = false, $width = null, $height = null): ?string
     {
         if (!Option::get('download_image', false) || empty($url)) {
             return $url;
@@ -153,37 +152,72 @@ public function get_nguonc(): array
         try {
             $url = strtok($url, '?');
             $filename = substr($url, strrpos($url, '/') + 1);
+
+            $toWebp = Option::get('image_format', 'original') === 'webp';
+            if ($toWebp && !ImageStorage::supportsWebp()) {
+                Log::warning('[crawler] PHP chưa hỗ trợ encode WebP, giữ định dạng gốc: ' . $url);
+                $toWebp = false;
+            }
+            if ($toWebp) {
+                $filename = preg_replace('/\.[a-zA-Z0-9]+$/', '', $filename) . '.webp';
+            }
+
             $path = "images/{$slug}/{$filename}";
+            $storage = ImageStorage::disk();
 
-            if (Storage::disk('public')->exists($path) && $this->forceUpdate == false) {
-                return Storage::url($path);
+            if ($this->forceUpdate == false && $storage->exists($path)) {
+                return ImageStorage::url($path);
             }
 
-            // Khởi tạo curl để tải về hình ảnh
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_HEADER, false);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36");
-            $image_data = curl_exec($ch);
-            curl_close($ch);
-
-            $img = Image::make($image_data);
-
-            if ($shouldResize) {
-                $img->resize($width, $height, function ($constraint) {
-                    $constraint->aspectRatio();
-                });
+            $image_data = $this->downloadImage($url);
+            if (empty($image_data)) {
+                Log::error('[crawler] Không tải được ảnh: ' . $url);
+                return $url;
             }
 
-            Storage::disk('public')->put($path, null);
+            $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($image_data) ?: null;
 
-            $img->save(storage_path("app/public/" . $path));
+            // Chỉ decode/encode lại khi thật sự cần (đổi sang webp hoặc resize),
+            // còn lại giữ nguyên bytes gốc để không giảm chất lượng.
+            if ($toWebp || $shouldResize) {
+                $img = Image::make($image_data);
 
-            return Storage::url($path);
+                if ($shouldResize) {
+                    $img->resize($width, $height, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                }
+
+                $quality = (int) Option::get('image_quality', 85) ?: 85;
+                $encoded = $toWebp ? $img->encode('webp', $quality) : $img->encode(null, $quality);
+
+                $image_data = (string) $encoded;
+                $mime = $encoded->mime() ?: $mime;
+                $img->destroy();
+            }
+
+            ImageStorage::put($path, $image_data, $mime);
+
+            return ImageStorage::url($path);
         } catch (\Exception $e) {
             Log::error($e->getMessage());
             return $url;
         }
+    }
+
+    protected function downloadImage(string $url)
+    {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36");
+        $image_data = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return ($status >= 200 && $status < 300) ? $image_data : null;
     }
 }

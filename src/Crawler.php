@@ -22,7 +22,7 @@ class Crawler extends BaseCrawler
         $this->checkIsInExcludedListNguonc($payload);
 
         $movie = Movie::where('update_handler', static::class)
-            ->where('update_identity', $payload['movie']['id'])
+            ->where('update_identity', $payload['movie']['id'] ?? null)
             ->first();
 
         if (!$this->hasChange($movie, md5($body)) && $this->forceUpdate == false) {
@@ -37,7 +37,7 @@ class Crawler extends BaseCrawler
         } else {
             $movie = Movie::create(array_merge($info, [
                 'update_handler' => static::class,
-                'update_identity' => $payload['movie']['id'],
+                'update_identity' => $payload['movie']['id'] ?? null,
                 'update_checksum' => md5($body)
             ]));
         }
@@ -95,17 +95,17 @@ class Crawler extends BaseCrawler
 //    Lọc phim Nguonc
 protected function checkIsInExcludedListNguonc($payload)
 {
-    $newType = $this->getTypeMovie($payload['movie']['category']['1']['list'][0]['name']);
+    $newType = $this->getTypeMovie($payload['movie']['category']['1']['list'][0]['name'] ?? null);
     if (in_array($newType, $this->excludedType)) {
         throw new \Exception("Thuộc định dạng đã loại trừ");
     }
 
-    $newCategories = collect($payload['movie']['category']['2']['list'])->pluck('name')->toArray();
+    $newCategories = collect($payload['movie']['category']['2']['list'] ?? [])->pluck('name')->toArray();
     if (array_intersect($newCategories, $this->excludedCategories)) {
         throw new \Exception("Thuộc thể loại đã loại trừ");
     }
 
-    $newRegions = collect($payload['movie']['category']['4']['list'])->pluck('name')->toArray();
+    $newRegions = collect($payload['movie']['category']['4']['list'] ?? [])->pluck('name')->toArray();
     if (array_intersect($newRegions, $this->excludedRegions)) {
         throw new \Exception("Thuộc quốc gia đã loại trừ");
     }
@@ -113,17 +113,17 @@ protected function checkIsInExcludedListNguonc($payload)
 //  End lọc phim nguồnc
     protected function checkIsInExcludedList($payload)
     {
-        $newType = $payload['movie']['type'];
+        $newType = $payload['movie']['type'] ?? null;
         if (in_array($newType, $this->excludedType)) {
             throw new \Exception("Thuộc định dạng đã loại trừ");
         }
 
-        $newCategories = collect($payload['movie']['category'])->pluck('name')->toArray();
+        $newCategories = collect($payload['movie']['category'] ?? [])->pluck('name')->toArray();
         if (array_intersect($newCategories, $this->excludedCategories)) {
             throw new \Exception("Thuộc thể loại đã loại trừ");
         }
 
-        $newRegions = collect($payload['movie']['country'])->pluck('name')->toArray();
+        $newRegions = collect($payload['movie']['country'] ?? [])->pluck('name')->toArray();
         if (array_intersect($newRegions, $this->excludedRegions)) {
             throw new \Exception("Thuộc quốc gia đã loại trừ");
         }
@@ -134,7 +134,8 @@ protected function syncActorsNguonc($movie, array $payload)
     if (!in_array('actors', $this->fields)) return;
 
     $actors = [];
-    if(!empty($payload['movie']['casts'])){
+    // API nguồnc đôi khi trả "casts" là chuỗi (vd: "Đang cập nhật") thay vì mảng tên diễn viên.
+    if (!empty($payload['movie']['casts']) && is_array($payload['movie']['casts'])) {
         foreach ($payload['movie']['casts'] as $actor) {
             if (!trim($actor)) continue;
             $actors[] = Actor::firstOrCreate(['name' => trim($actor)])->id;
@@ -148,7 +149,7 @@ protected function syncDirectorsNguonc($movie, array $payload)
     if (!in_array('directors', $this->fields)) return;
 
     $directors = [];
-    if(!empty($payload['movie']['director'])){
+    if (!empty($payload['movie']['director']) && is_array($payload['movie']['director'])) {
         foreach ($payload['movie']['director'] as $director) {
             if (!trim($director)) continue;
             $directors[] = Director::firstOrCreate(['name' => trim($director)])->id;
@@ -161,8 +162,8 @@ protected function syncCategoriesNguonc($movie, array $payload)
 {
     if (!in_array('categories', $this->fields)) return;
     $categories = [];
-    foreach ($payload['movie']['category']['2']['list']as $category) {
-        if (!trim($category['name'])) continue;
+    foreach ($payload['movie']['category']['2']['list'] ?? [] as $category) {
+        if (!trim($category['name'] ?? '')) continue;
         $categories[] = Category::firstOrCreate(['name' => trim($category['name'])])->id;
     }
     // if($payload['movie']['type'] === 'hoathinh') $categories[] = Category::firstOrCreate(['name' => 'Hoạt Hình'])->id;
@@ -175,8 +176,8 @@ protected function syncRegionsNguonc($movie, array $payload)
     if (!in_array('regions', $this->fields)) return;
 
     $regions = [];
-    foreach ($payload['movie']['category']['4']['list'] as $region) {
-        if (!trim($region['name'])) continue;
+    foreach ($payload['movie']['category']['4']['list'] ?? [] as $region) {
+        if (!trim($region['name'] ?? '')) continue;
         $regions[] = Region::firstOrCreate(['name' => trim($region['name'])])->id;
     }
     $movie->regions()->sync($regions);
@@ -207,9 +208,11 @@ protected function getTypeMovie($type)
         if (!in_array('actors', $this->fields)) return;
 
         $actors = [];
-        foreach ($payload['movie']['actor'] as $actor) {
-            if (!trim($actor)) continue;
-            $actors[] = Actor::firstOrCreate(['name' => trim($actor)])->id;
+        if (!empty($payload['movie']['actor']) && is_array($payload['movie']['actor'])) {
+            foreach ($payload['movie']['actor'] as $actor) {
+                if (!trim($actor)) continue;
+                $actors[] = Actor::firstOrCreate(['name' => trim($actor)])->id;
+            }
         }
         $movie->actors()->sync($actors);
     }
@@ -219,9 +222,11 @@ protected function getTypeMovie($type)
         if (!in_array('directors', $this->fields)) return;
 
         $directors = [];
-        foreach ($payload['movie']['director'] as $director) {
-            if (!trim($director)) continue;
-            $directors[] = Director::firstOrCreate(['name' => trim($director)])->id;
+        if (!empty($payload['movie']['director']) && is_array($payload['movie']['director'])) {
+            foreach ($payload['movie']['director'] as $director) {
+                if (!trim($director)) continue;
+                $directors[] = Director::firstOrCreate(['name' => trim($director)])->id;
+            }
         }
         $movie->directors()->sync($directors);
     }
@@ -230,12 +235,12 @@ protected function getTypeMovie($type)
     {
         if (!in_array('categories', $this->fields)) return;
         $categories = [];
-        foreach ($payload['movie']['category'] as $category) {
-            if (!trim($category['name'])) continue;
+        foreach ($payload['movie']['category'] ?? [] as $category) {
+            if (!trim($category['name'] ?? '')) continue;
             $categories[] = Category::firstOrCreate(['name' => trim($category['name'])])->id;
         }
-        if($payload['movie']['type'] === 'hoathinh') $categories[] = Category::firstOrCreate(['name' => 'Hoạt Hình'])->id;
-        if($payload['movie']['type'] === 'tvshows') $categories[] = Category::firstOrCreate(['name' => 'TV Shows'])->id;
+        if (($payload['movie']['type'] ?? null) === 'hoathinh') $categories[] = Category::firstOrCreate(['name' => 'Hoạt Hình'])->id;
+        if (($payload['movie']['type'] ?? null) === 'tvshows') $categories[] = Category::firstOrCreate(['name' => 'TV Shows'])->id;
         $movie->categories()->sync($categories);
     }
 
@@ -244,8 +249,8 @@ protected function getTypeMovie($type)
         if (!in_array('regions', $this->fields)) return;
 
         $regions = [];
-        foreach ($payload['movie']['country'] as $region) {
-            if (!trim($region['name'])) continue;
+        foreach ($payload['movie']['country'] ?? [] as $region) {
+            if (!trim($region['name'] ?? '')) continue;
             $regions[] = Region::firstOrCreate(['name' => trim($region['name'])])->id;
         }
         $movie->regions()->sync($regions);
@@ -272,9 +277,11 @@ protected function getTypeMovie($type)
     {
         if (!in_array('episodes', $this->fields)) return;
         $flag = 0;
-        foreach ($payload['movie']['episodes'] as $server) {
-            foreach ($server['items'] as $episode) {
-                if ($episode['embed']) {
+        foreach ($payload['movie']['episodes'] ?? [] as $server) {
+            // Không phải tập nào cũng có cả 2 link "embed" và "m3u8" -> dùng empty() để tránh
+            // "Undefined array key" khi thiếu key (chứ không phải chỉ khi giá trị rỗng).
+            foreach ($server['items'] ?? [] as $episode) {
+                if (!empty($episode['embed'])) {
                     Episode::updateOrCreate([
                         'id' => $movie->episodes[$flag]->id ?? null
                     ], [
@@ -287,7 +294,7 @@ protected function getTypeMovie($type)
                     ]);
                     $flag++;
                 }
-                if ($episode['m3u8']) {
+                if (!empty($episode['m3u8'])) {
                     Episode::updateOrCreate([
                         'id' => $movie->episodes[$flag]->id ?? null
                     ], [
@@ -311,9 +318,9 @@ protected function getTypeMovie($type)
     {
         if (!in_array('episodes', $this->fields)) return;
         $flag = 0;
-        foreach ($payload['episodes'] as $server) {
-            foreach ($server['server_data'] as $episode) {
-                if ($episode['link_m3u8']) {
+        foreach ($payload['episodes'] ?? [] as $server) {
+            foreach ($server['server_data'] ?? [] as $episode) {
+                if (!empty($episode['link_m3u8'])) {
                     Episode::updateOrCreate([
                         'id' => $movie->episodes[$flag]->id ?? null
                     ], [
@@ -326,7 +333,7 @@ protected function getTypeMovie($type)
                     ]);
                     $flag++;
                 }
-                if ($episode['link_embed']) {
+                if (!empty($episode['link_embed'])) {
                     Episode::updateOrCreate([
                         'id' => $movie->episodes[$flag]->id ?? null
                     ], [
