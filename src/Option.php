@@ -40,14 +40,26 @@ class Option
 
     public static function getEntry()
     {
-        return Setting::firstOrCreate([
-            'key' => 'hacoidev/movie-crawler.options',
-        ], [
-            'name' => 'Options',
-            'field' => json_encode(['name' => 'value', 'type', 'hidden']),
-            'group' => 'crawler',
-            'active' => false
-        ]);
+        $key = 'hacoidev/movie-crawler.options';
+
+        $entry = Setting::where('key', $key)->first();
+        if ($entry) {
+            return $entry;
+        }
+
+        // Model Setting thật của backpack/settings chỉ có $fillable = ['value'],
+        // nên firstOrCreate([...]) sẽ lặng lẽ bỏ qua key/name/field/group/active
+        // (mass assignment bị chặn) và tạo ra 1 dòng rỗng. Gán trực tiếp từng
+        // thuộc tính để bỏ qua giới hạn $fillable.
+        $entry = new Setting();
+        $entry->key = $key;
+        $entry->name = 'Options';
+        $entry->field = json_encode(['name' => 'value', 'type', 'hidden']);
+        $entry->group = 'crawler';
+        $entry->active = false;
+        $entry->save();
+
+        return $entry;
     }
 
     public static function getAllOptions()
