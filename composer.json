@@ -3,7 +3,7 @@
     "description": "Tool crawler",
     "type": "package",
     "require": {
-        "hacoidev/ophim-core": "dev-main",
+        "roxone/ophim-core": "dev-main",
         "intervention/image": "^2.7"
     },
     "license": "MIT",
