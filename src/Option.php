@@ -62,23 +62,43 @@ class Option
         return $entry;
     }
 
-    public static function getAllOptions()
+    /**
+     * Lấy danh mục (thể loại / quốc gia) từ API ophim.
+     *
+     * Response hiện tại bọc danh sách trong data.items:
+     *   {"status":"success","message":"","data":{"items":[{_id,name,slug}, ...]}}
+     * Bản cũ pluck('name','name') thẳng trên toàn bộ response nên duyệt đúng 3 khoá
+     * status/message/data — không khoá nào có 'name' — và luôn trả về ['' => null],
+     * khiến ô chọn loại trừ chỉ có một option rỗng. data_get(..., 'data.items') xử lý
+     * dạng mới và fallback về $data cho dạng phẳng cũ.
+     *
+     * Mỗi danh mục có try/catch riêng: trước đây một try bọc cả hai, thể loại lỗi là
+     * quốc gia không bao giờ được nạp.
+     */
+    public static function danhMucOphim(string $duongDan, string $khoaCache): array
     {
-        $categories = [];
-        $regions = [];
         try {
-            $categories = Cache::remember('movie_categories', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
-                return collect($data)->pluck('name', 'name')->toArray();
-            });
+            return Cache::remember($khoaCache, 86400, function () use ($duongDan) {
+                $url = sprintf('%s/%s', config('movie_crawler.domain', 'https://ophim1.com'), $duongDan);
+                $data = json_decode(file_get_contents($url), true) ?? [];
+                $items = data_get($data, 'data.items', is_array($data) ? $data : []);
 
-            $regions = Cache::remember('movie_regions', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
-                return collect($data)->pluck('name', 'name')->toArray();
+                return collect($items)
+                    ->pluck('name', 'name')
+                    ->filter(function ($v) {
+                        return is_string($v) && trim($v) !== '';
+                    })
+                    ->toArray();
             });
         } catch (\Throwable $th) {
-
+            return [];
         }
+    }
+
+    public static function getAllOptions()
+    {
+        $categories = static::danhMucOphim('the-loai', 'movie_categories');
+        $regions = static::danhMucOphim('quoc-gia', 'movie_regions');
 
 
         $fields = [
@@ -121,6 +141,19 @@ class Option
                 'name' => 'download_image',
                 'label' => 'Tải ảnh khi crawl',
                 'type' => 'checkbox',
+                'tab' => 'Image Optimize'
+            ],
+            'image_source_base' => [
+                'name' => 'image_source_base',
+                'label' => 'Tiền tố ảnh nguồn',
+                'type' => 'text',
+                'value' => 'https://img.ophim.live/uploads/movies/',
+                'hint' => 'Dùng khi nguồn trả về tên file thay vì URL đầy đủ — API ophim hiện trả '
+                    . '<code>ten-phim-thumb.webp</code> nên phải ghép tiền tố này mới tải/hiển thị được. '
+                    . 'Giá trị đã là URL đầy đủ (nguonc) thì bỏ qua tiền tố. Để trống nếu không muốn ghép.',
+                'wrapper' => [
+                    'class' => 'form-group col-md-8',
+                ],
                 'tab' => 'Image Optimize'
             ],
             'image_storage_disk' => [

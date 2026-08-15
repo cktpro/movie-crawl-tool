@@ -57,7 +57,10 @@ class CrawlerScheduleCommand extends Command
             $response = json_decode(Http::timeout(30)->get($link, [
                 'page' => $i
             ]), true);
-            if ($response['status'] && count($response['items'])) {
+            // Guard bằng ?? / !empty: đoạn này nằm NGOÀI try/catch của vòng lặp phim,
+            // nên API trả về payload lỗi (thiếu 'status' hoặc 'items') là ném
+            // ErrorException và chết cả lượt cron chứ không chỉ bỏ qua một trang.
+            if (($response['status'] ?? false) && ! empty($response['items'])) {
                 $data->push(...$response['items']);
             }
         }

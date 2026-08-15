@@ -57,8 +57,10 @@ class Crawler extends BaseCrawler
 
         $this->checkIsInExcludedList($payload);
 
+        // ?? null giống nhánh nguonc: payload lỗi (phim bị gỡ, API trả {status:false})
+        // không có key 'movie' nên đọc trực tiếp sẽ ném ErrorException.
         $movie = Movie::where('update_handler', static::class)
-            ->where('update_identity', $payload['movie']['_id'])
+            ->where('update_identity', $payload['movie']['_id'] ?? null)
             ->first();
 
         if (!$this->hasChange($movie, md5($body)) && $this->forceUpdate == false) {
@@ -73,7 +75,7 @@ class Crawler extends BaseCrawler
         } else {
             $movie = Movie::create(array_merge($info, [
                 'update_handler' => static::class,
-                'update_identity' => $payload['movie']['_id'],
+                'update_identity' => $payload['movie']['_id'] ?? null,
                 'update_checksum' => md5($body)
             ]));
         }

@@ -53,35 +53,65 @@ public function get_nguonc(): array
         $info = $this->payload['movie'] ?? [];
         $episodes = $this->payload['episodes'] ?? [];
 
+        // Mọi key đều đọc qua ?? — payload của API bên ngoài không đảm bảo có đủ. PHP 8
+        // + HandleExceptions biến "Undefined array key" thành ErrorException nên chỉ cần
+        // một phim thiếu key là dừng cả lượt crawl. Nhánh nguonc (get_nguonc) đã gia cố
+        // từ 2026-08-14, nhánh ophim này bị bỏ sót.
         $data = [
-            'name' => $info['name'],
-            'origin_name' => $info['origin_name'],
-            'publish_year' => $info['year'],
-            'content' => $info['content'],
+            'name' => $info['name'] ?? '',
+            'origin_name' => $info['origin_name'] ?? '',
+            'publish_year' => $info['year'] ?? null,
+            'content' => $info['content'] ?? '',
             'type' =>  $this->getMovieType($info, $episodes),
-            'status' => $info['status'],
-            'thumb_url' => $this->getThumbImage($info['slug'], $info['thumb_url']),
-            'poster_url' => $this->getPosterImage($info['slug'], $info['poster_url']),
-            'is_copyright' => $info['is_copyright'],
+            'status' => $info['status'] ?? null,
+            'thumb_url' => $this->getThumbImage($info['slug'] ?? '', $info['thumb_url'] ?? null),
+            'poster_url' => $this->getPosterImage($info['slug'] ?? '', $info['poster_url'] ?? null),
+            'is_copyright' => $info['is_copyright'] ?? false,
             'trailer_url' => $info['trailer_url'] ?? "",
-            'quality' => $info['quality'],
-            'language' => $info['lang'],
-            'episode_time' => $info['time'],
-            'episode_current' => $info['episode_current'],
-            'episode_total' => $info['episode_total'],
-            'notify' => $info['notify'],
-            'showtimes' => $info['showtimes'],
-            'is_shown_in_theater' => $info['chieurap'],
+            'quality' => $info['quality'] ?? '',
+            'language' => $info['lang'] ?? '',
+            'episode_time' => $info['time'] ?? '',
+            'episode_current' => $info['episode_current'] ?? '',
+            'episode_total' => $info['episode_total'] ?? '',
+            'notify' => $info['notify'] ?? '',
+            'showtimes' => $info['showtimes'] ?? '',
+            'is_shown_in_theater' => $info['chieurap'] ?? false,
         ];
 
         return $data;
+    }
+
+    /**
+     * Ghép tiền tố cho ảnh khi nguồn trả về đường dẫn tương đối.
+     *
+     * API ophim hiện trả TÊN FILE TRẦN cho thumb_url/poster_url ("soulm8te-thumb.webp")
+     * và trong response không có trường CDN nào để suy ra domain. Nếu đưa thẳng chuỗi
+     * này xuống getImage(): bật "Tải ảnh khi crawl" thì tải thất bại rồi lưu lại chính
+     * tên file, tắt thì lưu thẳng tên file — cách nào cũng ra một giá trị không dùng
+     * được, ảnh vỡ trên site. nguonc thì trả URL tuyệt đối nên không bị ảnh hưởng.
+     *
+     * Tiền tố lấy từ option "Tiền tố ảnh nguồn"; giá trị đã là URL tuyệt đối hoặc
+     * bắt đầu bằng "//" thì giữ nguyên.
+     */
+    protected function chuanHoaUrlAnh(?string $url): ?string
+    {
+        if (empty($url) || preg_match('~^(https?:)?//~i', $url)) {
+            return $url;
+        }
+
+        $base = trim((string) Option::get('image_source_base', 'https://img.ophim.live/uploads/movies/'));
+        if ($base === '') {
+            return $url;
+        }
+
+        return rtrim($base, '/') . '/' . ltrim($url, '/');
     }
 
     public function getThumbImage($slug, $url)
     {
         return $this->getImage(
             $slug,
-            $url,
+            $this->chuanHoaUrlAnh($url),
             Option::get('should_resize_thumb', false),
             Option::get('resize_thumb_width'),
             Option::get('resize_thumb_height')
@@ -92,7 +122,7 @@ public function get_nguonc(): array
     {
         return $this->getImage(
             $slug,
-            $url,
+            $this->chuanHoaUrlAnh($url),
             Option::get('should_resize_poster', false),
             Option::get('resize_poster_width'),
             Option::get('resize_poster_height')
@@ -139,9 +169,18 @@ public function get_nguonc(): array
     // End get type nguonc
     protected function getMovieType($info, $episodes)
     {
-        return $info['type'] == 'series' ? 'series'
-            : ($info['type'] == 'single' ? 'single'
-                : (count(reset($episodes)['server_data'] ?? []) > 1 ? 'series' : 'single'));
+        $type = $info['type'] ?? null;
+
+        if ($type === 'series' || $type === 'single') {
+            return $type;
+        }
+
+        // reset() trên mảng rỗng trả về false, nên phải kiểm tra is_array trước khi
+        // đọc ['server_data'] — bản cũ đọc thẳng và ném lỗi khi payload không có tập.
+        $server = is_array($episodes) && $episodes ? reset($episodes) : null;
+        $danhSachTap = is_array($server) ? ($server['server_data'] ?? []) : [];
+
+        return count($danhSachTap) > 1 ? 'series' : 'single';
     }
 
     protected function getImage($slug, ?string $url, $shouldResize = false, $width = null, $height = null): ?string

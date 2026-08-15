@@ -242,13 +242,37 @@ class CrawlController extends CrudController
         ];
     }
 
-    public function getMoviesFromParams(Request $request) {
-        $field = explode('-', request('params'))[0];
-        $val = explode('-', request('params'))[1];
-        if (!$val) {
-            return Movie::where($field, $val)->orWhere($field, 'like', '%.com%')->orWhere($field, NULL)->get();
-        } else {
-            return Movie::where($field, $val)->get();
+    /**
+     * Trả danh sách phim theo lựa chọn ở ô "Lấy danh sách" trên trang crawler.
+     *
+     * Ba điểm đã sửa so với bản cũ:
+     * - explode('-', ...)[1] ném "Undefined array key 1" (HTTP 500) khi params rỗng
+     *   hoặc không chứa dấu gạch. Dùng array_pad để luôn có đủ 2 phần tử.
+     * - $field lấy thẳng từ request rồi đưa vào where() nên chỉ định được cột tuỳ ý
+     *   (thử params=id-1 là chạy). Nay kiểm qua danh sách trắng.
+     * - orWhere($field, NULL) sinh ra "= NULL" nên không bao giờ khớp; phim có cột
+     *   NULL bị bỏ sót. Đổi sang orWhereNull và nhóm các orWhere vào closure để không
+     *   nới lỏng điều kiện khác khi về sau có thêm ràng buộc.
+     */
+    public function getMoviesFromParams(Request $request)
+    {
+        [$field, $val] = array_pad(explode('-', (string) $request->input('params'), 2), 2, '');
+
+        $cotChoPhep = ['thumb_url', 'poster_url', 'trailer_url', 'status', 'type'];
+        if (! in_array($field, $cotChoPhep, true)) {
+            return response()->json([
+                'message' => 'Tham số không hợp lệ: ' . $field,
+            ], 422);
         }
+
+        if ($val === '') {
+            return Movie::where(function ($query) use ($field) {
+                $query->where($field, '')
+                    ->orWhereNull($field)
+                    ->orWhere($field, 'like', '%.com%');
+            })->get();
+        }
+
+        return Movie::where($field, $val)->get();
     }
 }
