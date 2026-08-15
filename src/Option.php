@@ -8,14 +8,43 @@ use Illuminate\Support\Facades\Log;
 
 class Option
 {
+    /**
+     * Giá trị option đã gộp, nhớ trong suốt một request/lệnh CLI.
+     *
+     * Không có nó thì MỖI lần Option::get() là một query `settings` + dựng lại toàn bộ
+     * mảng schema (kèm 2 lượt đọc cache danh mục). Các vòng lặp trên bảng movies gọi
+     * hàm này rất nhiều lần — trang "Chuyển ảnh lên R2" phân loại 2 cột ảnh của 26k phim,
+     * mỗi lần phân loại lại hỏi 5 option R2 → hơn 260.000 query, đủ để chạm
+     * max_execution_time và làm trang không mở được.
+     */
+    protected static $daGop = null;
+
+    /** Schema option (getAllOptions) đã dựng, nhớ trong một request */
+    protected static $schema = null;
+
+    /** Bản ghi settings đã nạp, nhớ trong một request */
+    protected static $entry = null;
+
     public static function get($name, $default = null)
     {
-        $entry = static::getEntry();
-        $fields = array_column(static::getAllOptions(), 'value', 'name');
+        if (static::$daGop === null) {
+            $entry = static::getEntry();
+            $fields = array_column(static::getAllOptions(), 'value', 'name');
 
-        $options = array_merge($fields, json_decode($entry->value, true) ?? []);
+            static::$daGop = array_merge($fields, json_decode($entry->value, true) ?? []);
+        }
 
-        return isset($options[$name]) ? $options[$name] : $default;
+        return isset(static::$daGop[$name]) ? static::$daGop[$name] : $default;
+    }
+
+    /**
+     * Xoá bộ nhớ tạm — gọi sau khi ghi lại options trong cùng một request.
+     */
+    public static function quenCache(): void
+    {
+        static::$daGop = null;
+        static::$schema = null;
+        static::$entry = null;
     }
 
     // public static function set($name, $value)
@@ -40,11 +69,15 @@ class Option
 
     public static function getEntry()
     {
+        if (static::$entry !== null) {
+            return static::$entry;
+        }
+
         $key = 'hacoidev/movie-crawler.options';
 
         $entry = Setting::where('key', $key)->first();
         if ($entry) {
-            return $entry;
+            return static::$entry = $entry;
         }
 
         // Model Setting thật của backpack/settings chỉ có $fillable = ['value'],
@@ -59,7 +92,7 @@ class Option
         $entry->active = false;
         $entry->save();
 
-        return $entry;
+        return static::$entry = $entry;
     }
 
     /**
@@ -97,6 +130,10 @@ class Option
 
     public static function getAllOptions()
     {
+        if (static::$schema !== null) {
+            return static::$schema;
+        }
+
         $categories = static::danhMucOphim('the-loai', 'movie_categories');
         $regions = static::danhMucOphim('quoc-gia', 'movie_regions');
 
@@ -129,7 +166,7 @@ class Option
             'studios' => 'Studio',
         ];
 
-        return [
+        return static::$schema = [
             'domain' => [
                 'name' => 'domain',
                 'label' => 'API Domain',

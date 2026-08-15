@@ -80,6 +80,9 @@ class CrawlerSettingController extends CrudController
         );
         $this->data['entry'] = $this->crud->entry = $item;
 
+        // Option nhớ giá trị theo request; vừa ghi xong thì bỏ bản nhớ cũ đi.
+        Option::quenCache();
+
         Alert::success(trans('backpack::crud.update_success'))->flash();
 
         return back();
