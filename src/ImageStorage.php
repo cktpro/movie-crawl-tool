@@ -70,6 +70,68 @@ class ImageStorage
     }
 
     /**
+     * Disk R2, bất kể option "Nơi lưu ảnh" đang chọn gì.
+     *
+     * disk() ở trên trả về nơi lưu ảnh ĐANG dùng để crawl. Công cụ chuyển ảnh lên R2
+     * thì luôn cần chính R2 làm đích, kể cả khi site vẫn đang lưu ảnh ở local.
+     */
+    public static function r2Disk(): FilesystemAdapter
+    {
+        static::configureR2();
+
+        return Storage::disk(static::R2_DISK);
+    }
+
+    /**
+     * R2 đã có đủ thông tin để kết nối chưa.
+     */
+    public static function r2Ready(): bool
+    {
+        $c = static::r2Config();
+
+        foreach (['bucket', 'key', 'secret', 'endpoint'] as $k) {
+            if (empty($c[$k])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Domain công khai của bucket R2 (option r2_url), không có dấu / ở cuối.
+     */
+    public static function r2BaseUrl(): string
+    {
+        return rtrim((string) (static::r2Config()['url'] ?? ''), '/');
+    }
+
+    /**
+     * URL công khai của một path trên R2.
+     */
+    public static function r2Url(string $path): string
+    {
+        $base = static::r2BaseUrl();
+
+        return $base
+            ? $base . '/' . ltrim($path, '/')
+            : static::r2Disk()->url($path);
+    }
+
+    /**
+     * Ghi file thẳng lên R2 kèm ContentType/CacheControl.
+     */
+    public static function putToR2(string $path, string $contents, ?string $mime = null): bool
+    {
+        $options = ['CacheControl' => 'public, max-age=31536000'];
+        if ($mime) {
+            $options['ContentType'] = $mime;
+        }
+
+        return (bool) static::r2Disk()->put($path, $contents, $options);
+    }
+
+    /**
      * PHP hiện tại có encode được WebP không (GD hoặc Imagick).
      */
     public static function supportsWebp(): bool

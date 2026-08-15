@@ -27,4 +27,6 @@ Route::group([
     Route::post('/plugin/movie-crawler/get-movies', 'CrawlController@getMoviesFromParams');
     Route::get('/plugin/movie-crawler/images-cleanup', 'ImageCleanupController@index');
     Route::post('/plugin/movie-crawler/images-cleanup', 'ImageCleanupController@destroy');
+    Route::get('/plugin/movie-crawler/images-r2', 'ImageR2Controller@index');
+    Route::post('/plugin/movie-crawler/images-r2', 'ImageR2Controller@migrate');
 });

@@ -6,6 +6,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as SP;
 use Movie\Crawler\MovieCrawler\Console\CleanupOrphanImagesCommand;
 use Movie\Crawler\MovieCrawler\Console\CrawlerScheduleCommand;
+use Movie\Crawler\MovieCrawler\Console\MigrateImagesToR2Command;
 use Movie\Crawler\MovieCrawler\Option;
 
 class MovieCrawlerServiceProvider extends SP
@@ -33,6 +34,7 @@ class MovieCrawlerServiceProvider extends SP
                     ['name' => 'Crawler', 'icon' => 'la la-hand-grab-o', 'url' => backpack_url('/plugin/movie-crawler')],
                     ['name' => 'Crawler Nguonc', 'icon' => 'la la-hand-grab-o', 'url' => backpack_url('/plugin/nguonc-crawler')],
                     ['name' => 'Option', 'icon' => 'la la-cog', 'url' => backpack_url('/plugin/movie-crawler/options')],
+                    ['name' => 'Chuyển ảnh lên R2', 'icon' => 'la la-cloud-upload', 'url' => backpack_url('/plugin/movie-crawler/images-r2')],
                     ['name' => 'Dọn ảnh rác', 'icon' => 'la la-trash-o', 'url' => backpack_url('/plugin/movie-crawler/images-cleanup')],
                 ],
             ]
@@ -60,6 +62,7 @@ class MovieCrawlerServiceProvider extends SP
         $this->commands([
             CrawlerScheduleCommand::class,
             CleanupOrphanImagesCommand::class,
+            MigrateImagesToR2Command::class,
         ]);
 
         $this->app->booted(function () {
