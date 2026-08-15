@@ -40,7 +40,7 @@
                         </div>
                         <div class="form-group col-12">
                             <label class="text-danger">Loại trừ định dạng</label>
-                            <button id="excluded-all-type" type="button" class="btn btn-sm btn-info">All</button>
+                            <button id="excluded-all-type" type="button" class="btn btn-sm btn-info">Chọn hết / Bỏ hết</button>
                             <select id="excluded-type" class="form-control select2" name="excludedType[]" multiple>
                                 <option value="series">Phim Bộ</option>
                                 <option value="single">Phim Lẻ</option>
@@ -48,7 +48,7 @@
                         </div>
                         <div class="form-group col-12">
                             <label class="text-danger">Loại trừ thể loại</label>
-                            <button id="excluded-all-category" type="button" class="btn btn-sm btn-info">All</button>
+                            <button id="excluded-all-category" type="button" class="btn btn-sm btn-info">Chọn hết / Bỏ hết</button>
                             <select id="excluded-category" class="form-control select2" name="excludedCategories[]"
                                 multiple>
                                 @foreach ($categories as $category)
@@ -58,7 +58,7 @@
                         </div>
                         <div class="form-group col-12">
                             <label class="text-danger">Loại trừ quốc gia</label>
-                            <button id="excluded-all-regions" type="button" class="btn btn-sm btn-info">All</button>
+                            <button id="excluded-all-regions" type="button" class="btn btn-sm btn-info">Chọn hết / Bỏ hết</button>
                             <select id="excluded-regions" class="form-control select2" name="excludedRegions[]" multiple>
                                 @foreach ($regions as $region)
                                     <option value="{{ $region }}">{{ $region }}</option>
@@ -207,24 +207,25 @@
             $(function() {
                 $(".select2").select2();
 
+                // Nút bật/tắt: chưa chọn gì thì chọn tất cả, đang có lựa chọn thì bỏ hết.
+                // (... || []) vì .val() của select multiple khi không chọn gì trả về null
+                // ở jQuery < 3.0 — gọi .length trên null sẽ ném TypeError.
+                function chonTatCaHoacBoHet(idSelect, danhSach) {
+                    var dangChon = $(idSelect).val() || [];
+                    var giaTri = dangChon.length === 0 ? Object.values(danhSach || {}) : [];
+                    $(idSelect).val(giaTri).trigger("change");
+                }
+
                 $("#excluded-all-type").on("click", function() {
-                    var allType = [];
-                    if ($("#excluded-type").val().length === 0) allType = ['series', 'single', 'hoathinh',
-                        'tvshows'
-                    ];
-                    $("#excluded-type").val(allType).trigger("change");
+                    chonTatCaHoacBoHet("#excluded-type", ['series', 'single', 'hoathinh', 'tvshows']);
                 });
 
                 $("#excluded-all-category").on("click", function() {
-                    var allCategory = [];
-                    if ($("#excluded-category").val().length === 0) allCategory = @json($categories);
-                    $("#excluded-category").val(Object.values(allCategory)).trigger("change");
+                    chonTatCaHoacBoHet("#excluded-category", @json($categories));
                 });
 
                 $("#excluded-all-regions").on("click", function() {
-                    var allRegions = [];
-                    if ($("#excluded-regions").val().length === 0) allRegions = @json($regions);
-                    $("#excluded-regions").val(Object.values(allRegions)).trigger("change");
+                    chonTatCaHoacBoHet("#excluded-regions", @json($regions));
                 });
             })
         </script>

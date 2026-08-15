@@ -80,44 +80,101 @@ class CrawlController extends CrudController
 // ShowCrawPage Nguonc
     public function showCrawlPageNguonc(Request $request)
     {
-        $categories = [];
-        $regions = [];
-        try {
-            $categories = Cache::remember('movie_categories', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
-                return collect($data)->pluck('name', 'name')->toArray();
-            });
-
-            $regions = Cache::remember('movie_regions', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
-                return collect($data)->pluck('name', 'name')->toArray();
-            });
-        } catch (\Throwable $th) {
-
-        }
+        [$categories, $regions] = $this->taxonomyNguonc();
 
         $fields = $this->movieUpdateOptions();
 
         return view('movie-crawler::crawl_nguonc', compact('fields', 'regions', 'categories'));
     }
+
+    /**
+     * Danh mục cho trang crawler định dạng nguonc.
+     *
+     * nguonc KHÔNG có API danh mục — đã dò: /api/quoc-gia và /api/films/quoc-gia đều
+     * trả 404, còn /api/films/danh-sach/quoc-gia trả về DANH SÁCH PHIM chứ không phải
+     * danh sách quốc gia. Danh mục chỉ xuất hiện trên menu trang chủ nguonc.
+     *
+     * Trước đây trang này nạp danh mục từ ophim1.com (giá trị mặc định của
+     * config('movie_crawler.domain'), vốn luôn NULL vì không có file config nào), tức
+     * lấy taxonomy của nguồn khác: 45 quốc gia của ophim trong khi nguonc chỉ có 16,
+     * và thiếu hẳn "Âu Mỹ" / "Quốc gia khác" là hai mục chỉ nguonc mới có. Bộ lọc trừ
+     * so khớp theo TÊN (array_intersect trong Crawler::checkIsInExcludedListNguonc)
+     * nên tên lệch là loại trừ không có tác dụng.
+     *
+     * Vì vậy dùng danh sách tĩnh chép từ menu nguonc (https://phim.nguonc.com — mục
+     * Thể loại và Quốc gia). Cố ý KHÔNG trộn thêm tên trong bảng categories/regions của
+     * DB: bộ lọc trừ so khớp với tên do chính nguonc trả về trong payload, còn tên trong
+     * DB là tổng hợp của mọi nguồn (chủ yếu ophim) nên chỉ thêm nhiễu — thực tế trộn vào
+     * sinh ra các mục trùng chỉ khác hoa/thường như "Bí Ẩn" và "Bí ẩn".
+     *
+     * Nếu nguonc thêm mục mới thì bổ sung vào đây (đối chiếu menu trang chủ nguonc).
+     */
+    protected function taxonomyNguonc(): array
+    {
+        $theLoai = [
+            'Hành Động', 'Phiêu Lưu', 'Hoạt Hình', 'Hài', 'Hình Sự', 'Tài Liệu',
+            'Chính Kịch', 'Gia Đình', 'Giả Tưởng', 'Lịch Sử', 'Kinh Dị', 'Nhạc',
+            'Bí Ẩn', 'Lãng Mạn', 'Khoa Học Viễn Tưởng', 'Gây Cấn', 'Chiến Tranh',
+            'Tâm Lý', 'Tình Cảm', 'Cổ Trang', 'Miền Tây', 'Phim 18+',
+        ];
+
+        $quocGia = [
+            'Âu Mỹ', 'Anh', 'Trung Quốc', 'Indonesia', 'Việt Nam', 'Pháp',
+            'Hồng Kông', 'Hàn Quốc', 'Nhật Bản', 'Thái Lan', 'Đài Loan', 'Nga',
+            'Hà Lan', 'Philippines', 'Ấn Độ', 'Quốc gia khác',
+        ];
+
+        // Blade lặp `@foreach ($regions as $region)` và JS dùng Object.values(), nên
+        // trả về dạng [ten => ten] cho khớp với dữ liệu API của trang ophim.
+        return [
+            array_combine($theLoai, $theLoai),
+            array_combine($quocGia, $quocGia),
+        ];
+    }
+
+    /**
+     * Danh mục cho trang crawler định dạng ophim, lấy từ API của chính ophim.
+     *
+     * Response hiện tại bọc danh sách trong data.items:
+     *   {"status":"success","message":"","data":{"items":[{_id,name,slug}, ...]}}
+     * Bản cũ pluck('name','name') thẳng trên toàn bộ response nên duyệt đúng 3 khoá
+     * status/message/data — không khoá nào có 'name' — và luôn trả về ['' => null],
+     * khiến ô chọn chỉ có duy nhất một option rỗng (nút "All" bấm vào không ra gì).
+     * data_get(..., 'data.items') xử lý dạng mới, fallback về $data cho dạng phẳng cũ.
+     *
+     * Mỗi danh mục có try/catch riêng: trước đây một try bọc cả hai, thể loại lỗi là
+     * quốc gia không bao giờ được nạp.
+     */
+    protected function taxonomyOphim(): array
+    {
+        $lay = function (string $duongDan, string $khoaCache) {
+            try {
+                return Cache::remember($khoaCache, 86400, function () use ($duongDan) {
+                    $url = sprintf('%s/%s', config('movie_crawler.domain', 'https://ophim1.com'), $duongDan);
+                    $data = json_decode(file_get_contents($url), true) ?? [];
+                    $items = data_get($data, 'data.items', is_array($data) ? $data : []);
+
+                    return collect($items)
+                        ->pluck('name', 'name')
+                        ->filter(function ($v) {
+                            return is_string($v) && trim($v) !== '';
+                        })
+                        ->toArray();
+                });
+            } catch (\Throwable $th) {
+                return [];
+            }
+        };
+
+        return [
+            $lay('the-loai', 'movie_categories'),
+            $lay('quoc-gia', 'movie_regions'),
+        ];
+    }
 // End ShowCrawlPage Nguonc
     public function showCrawlPage(Request $request)
     {
-        $categories = [];
-        $regions = [];
-        try {
-            $categories = Cache::remember('movie_categories', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
-                return collect($data)->pluck('name', 'name')->toArray();
-            });
-
-            $regions = Cache::remember('movie_regions', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('movie_crawler.domain', 'https://ophim1.com'))), true) ?? [];
-                return collect($data)->pluck('name', 'name')->toArray();
-            });
-        } catch (\Throwable $th) {
-
-        }
+        [$categories, $regions] = $this->taxonomyOphim();
 
         $fields = $this->movieUpdateOptions();
 
