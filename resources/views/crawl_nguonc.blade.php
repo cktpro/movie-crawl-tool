@@ -40,7 +40,8 @@
                         </div>
                         <div class="form-group col-12">
                             <label class="text-danger">Loại trừ định dạng</label>
-                            <button id="excluded-all-type" type="button" class="btn btn-sm btn-info">Chọn hết / Bỏ hết</button>
+                            <button id="excluded-all-type" type="button" class="btn btn-sm btn-info">Chọn hết</button>
+                            <button id="excluded-none-type" type="button" class="btn btn-sm btn-secondary">Bỏ hết</button>
                             <select id="excluded-type" class="form-control select2" name="excludedType[]" multiple>
                                 <option value="series">Phim Bộ</option>
                                 <option value="single">Phim Lẻ</option>
@@ -48,7 +49,8 @@
                         </div>
                         <div class="form-group col-12">
                             <label class="text-danger">Loại trừ thể loại</label>
-                            <button id="excluded-all-category" type="button" class="btn btn-sm btn-info">Chọn hết / Bỏ hết</button>
+                            <button id="excluded-all-category" type="button" class="btn btn-sm btn-info">Chọn hết</button>
+                            <button id="excluded-none-category" type="button" class="btn btn-sm btn-secondary">Bỏ hết</button>
                             <select id="excluded-category" class="form-control select2" name="excludedCategories[]"
                                 multiple>
                                 @foreach ($categories as $category)
@@ -58,7 +60,8 @@
                         </div>
                         <div class="form-group col-12">
                             <label class="text-danger">Loại trừ quốc gia</label>
-                            <button id="excluded-all-regions" type="button" class="btn btn-sm btn-info">Chọn hết / Bỏ hết</button>
+                            <button id="excluded-all-regions" type="button" class="btn btn-sm btn-info">Chọn hết</button>
+                            <button id="excluded-none-regions" type="button" class="btn btn-sm btn-secondary">Bỏ hết</button>
                             <select id="excluded-regions" class="form-control select2" name="excludedRegions[]" multiple>
                                 @foreach ($regions as $region)
                                     <option value="{{ $region }}">{{ $region }}</option>
@@ -207,37 +210,50 @@
             $(function() {
                 $(".select2").select2();
 
-                // Nút bật/tắt: chưa chọn gì thì chọn tất cả, đang có lựa chọn thì bỏ hết.
-                // (... || []) vì .val() của select multiple khi không chọn gì trả về null
-                // ở jQuery < 3.0 — gọi .length trên null sẽ ném TypeError.
-                function chonTatCaHoacBoHet(idSelect, danhSach) {
-                    var dangChon = $(idSelect).val() || [];
-                    var giaTri = dangChon.length === 0 ? Object.values(danhSach || {}) : [];
-                    $(idSelect).val(giaTri).trigger("change");
+                // Hai nút riêng biệt thay vì một nút bật/tắt. Bản cũ dùng chung một nút:
+                // "đang chọn gì đó thì bấm vào là xoá hết". Vì trang tự khôi phục lựa chọn
+                // cũ từ localStorage ngay khi mở, ô chọn thường đã có sẵn giá trị — nên cú
+                // bấm đầu tiên lại XOÁ chứ không chọn, trông y như nút hỏng.
+                function datGiaTriChon(idSelect, danhSach) {
+                    $(idSelect).val(Object.values(danhSach || {})).trigger("change");
                 }
 
                 $("#excluded-all-type").on("click", function() {
-                    chonTatCaHoacBoHet("#excluded-type", ['series', 'single', 'hoathinh', 'tvshows']);
+                    datGiaTriChon("#excluded-type", ['series', 'single', 'hoathinh', 'tvshows']);
                 });
-
                 $("#excluded-all-category").on("click", function() {
-                    chonTatCaHoacBoHet("#excluded-category", @json($categories));
+                    datGiaTriChon("#excluded-category", @json($categories));
+                });
+                $("#excluded-all-regions").on("click", function() {
+                    datGiaTriChon("#excluded-regions", @json($regions));
                 });
 
-                $("#excluded-all-regions").on("click", function() {
-                    chonTatCaHoacBoHet("#excluded-regions", @json($regions));
+                $("#excluded-none-type").on("click", function() {
+                    datGiaTriChon("#excluded-type", []);
+                });
+                $("#excluded-none-category").on("click", function() {
+                    datGiaTriChon("#excluded-category", []);
+                });
+                $("#excluded-none-regions").on("click", function() {
+                    datGiaTriChon("#excluded-regions", []);
                 });
             })
         </script>
         <script>
             $(document).ready(function() {
-                $("input[name=from]").val(localStorage.getItem('crawler-page-from') ?? 1);
-                $("input[name=to]").val(localStorage.getItem('crawler-page-to') ?? 1);
-                $("#excluded-type").val(localStorage.getItem('crawler-excluded-type')?.split(",") ?? []).trigger(
+                // Tiền tố riêng cho trang nguonc. Trước đây hai trang crawler dùng chung
+                // khoá 'crawler-excluded-*', mà danh mục hai nguồn khác nhau (ophim 45
+                // quốc gia / 23 thể loại, nguonc 16 / 22 và tên viết khác) nên lựa chọn
+                // của trang này tràn sang trang kia rồi khớp nhầm một phần.
+                const KHOA = 'crawler-nguonc-';
+
+                $("input[name=from]").val(localStorage.getItem(KHOA + 'page-from') ?? 1);
+                $("input[name=to]").val(localStorage.getItem(KHOA + 'page-to') ?? 1);
+                $("#excluded-type").val(localStorage.getItem(KHOA + 'excluded-type')?.split(",") ?? []).trigger(
                     "change");
-                $("#excluded-category").val(localStorage.getItem('crawler-excluded-category')?.split(",") ?? [])
+                $("#excluded-category").val(localStorage.getItem(KHOA + 'excluded-category')?.split(",") ?? [])
                     .trigger("change");
-                $("#excluded-regions").val(localStorage.getItem('crawler-excluded-regions')?.split(",") ?? []).trigger(
+                $("#excluded-regions").val(localStorage.getItem(KHOA + 'excluded-regions')?.split(",") ?? []).trigger(
                     "change");
 
                 let timeout_from = (localStorage.getItem("timeout_from")) ? localStorage.getItem(
@@ -255,19 +271,19 @@
                 });
 
                 $("#excluded-category").on('change', () => {
-                    localStorage.setItem('crawler-excluded-category', $("#excluded-category").val());
+                    localStorage.setItem(KHOA + 'excluded-category', $("#excluded-category").val());
                 });
                 $("#excluded-type").on('change', () => {
-                    localStorage.setItem('crawler-excluded-type', $("#excluded-type").val());
+                    localStorage.setItem(KHOA + 'excluded-type', $("#excluded-type").val());
                 });
                 $("#excluded-regions").on('change', () => {
-                    localStorage.setItem('crawler-excluded-regions', $("#excluded-regions").val());
+                    localStorage.setItem(KHOA + 'excluded-regions', $("#excluded-regions").val());
                 });
                 $("input[name=from]").on('change', () => {
-                    localStorage.setItem('crawler-page-from', $("input[name=from]").val());
+                    localStorage.setItem(KHOA + 'page-from', $("input[name=from]").val());
                 });
                 $("input[name=to]").on('change', () => {
-                    localStorage.setItem('crawler-page-to', $("input[name=to]").val());
+                    localStorage.setItem(KHOA + 'page-to', $("input[name=to]").val());
                 });
                 $("input[name=timeout_from]").change(() => {
                     localStorage.setItem("timeout_from", $("input[name=timeout_from]").val());
