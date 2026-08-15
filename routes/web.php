@@ -29,4 +29,6 @@ Route::group([
     Route::post('/plugin/movie-crawler/images-cleanup', 'ImageCleanupController@destroy');
     Route::get('/plugin/movie-crawler/images-r2', 'ImageR2Controller@index');
     Route::post('/plugin/movie-crawler/images-r2', 'ImageR2Controller@migrate');
+    Route::get('/plugin/movie-crawler/images-webp', 'ImageWebpController@index');
+    Route::post('/plugin/movie-crawler/images-webp', 'ImageWebpController@convert');
 });
